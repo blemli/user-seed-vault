@@ -8,7 +8,10 @@ use Illuminate\Support\Facades\Storage;
 
 class UserSeedVaultCommand extends Command
 {
-    public $signature = 'seedvault:add';
+    public $signature = 'seedvault:add 
+                        {--name= : The name of the user}
+                        {--mail= : The email address of the user}
+                        {--avatar= : The path to the avatar image file}';
 
     public $description = 'Add a new user to the seed vault with encrypted data';
 
@@ -43,10 +46,26 @@ class UserSeedVaultCommand extends Command
     {
         $this->info('Enter user details:');
         
-        $name = $this->ask('Name');
-        $email = $this->ask('Email');
+        // Get name from option or ask for it
+        $name = $this->option('name');
+        if (!$name) {
+            $name = $this->ask('Name');
+        }
+        
+        // Get email from option or ask for it
+        $email = $this->option('mail');
+        if (!$email) {
+            $email = $this->ask('Email');
+        }
+        
+        // Always ask for password (never as parameter)
         $password = $this->secret('Password');
-        $avatarPath = $this->ask('Avatar file path (absolute path)');
+        
+        // Get avatar path from option or ask for it
+        $avatarPath = $this->option('avatar');
+        if (!$avatarPath) {
+            $avatarPath = $this->ask('Avatar file path (absolute path)');
+        }
 
         // Validate avatar file exists
         if (!file_exists($avatarPath)) {
