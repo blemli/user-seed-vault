@@ -11,7 +11,8 @@ class UserSeedVaultCommand extends Command
     public $signature = 'seedvault:add 
                         {--name= : The name of the user}
                         {--mail= : The email address of the user}
-                        {--avatar= : The path to the avatar image file}';
+                        {--avatar= : The path to the avatar image file}
+                        {--seed : Run the UserSeeder after adding users}';
 
     public $description = 'Add a new user to the seed vault with encrypted data';
 
@@ -189,8 +190,24 @@ class UserSeedVaultCommand extends Command
         $this->addUsersToSeeder();
         
         $this->info('✅ Users successfully added to database/seeders/UserSeeder.php');
-        $this->line('');
-        $this->info('💡 You can now run "php artisan db:seed --class=UserSeeder" to seed the users.');
+        
+        // Check if --seed option is provided
+        if ($this->option('seed')) {
+            $this->line('');
+            $this->info('🌱 Running UserSeeder...');
+            
+            try {
+                $this->call('db:seed', ['--class' => 'UserSeeder']);
+                $this->info('✅ UserSeeder executed successfully!');
+            } catch (\Exception $e) {
+                $this->error('❌ Failed to run UserSeeder: ' . $e->getMessage());
+            }
+        } else {
+            $this->line('');
+            $this->info('💡 You can now run "php artisan db:seed --class=UserSeeder" to seed the users.');
+            $this->info('💡 Or use the --seed option to automatically run the seeder next time.');
+        }
+        
         $this->line('');
     }
 
