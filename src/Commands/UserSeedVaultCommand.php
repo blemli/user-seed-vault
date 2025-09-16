@@ -34,10 +34,7 @@ class UserSeedVaultCommand extends Command
             }
         }
 
-        do {
-            $this->addUser();
-            $addAnother = $this->confirm('Would you like to add another user?', false);
-        } while ($addAnother);
+        $this->addUser();
 
         $this->outputUsers();
 
@@ -312,6 +309,9 @@ class UserSeedVaultCommand extends Command
         
         $this->info('✅ Users successfully added to database/seeders/UserSeeder.php');
         
+        // Check if UserSeeder is in DatabaseSeeder
+        $this->checkAndAddToDatabaseSeeder();
+        
         // Check if --seed option is provided
         if ($this->option('seed')) {
             $this->line('');
@@ -454,6 +454,49 @@ class UserSeeder extends Seeder
     {
         // Count existing user entries by counting opening brackets
         return substr_count($usersContent, '[') - substr_count($usersContent, '// Users will be added here');
+    }
+
+    protected function checkAndAddToDatabaseSeeder(): void
+    {
+        $databaseSeederPath = database_path('seeders/DatabaseSeeder.php');
+        
+        // Check if DatabaseSeeder exists
+        if (!file_exists($databaseSeederPath)) {
+            $this->warn('DatabaseSeeder.php not found. Skipping DatabaseSeeder integration.');
+            return;
+        }
+        
+        $seederContent = file_get_contents($databaseSeederPath);
+        
+        // Check if UserSeeder is already called in DatabaseSeeder
+        if (strpos($seederContent, 'UserSeeder::class') !== false || 
+            strpos($seederContent, 'UserSeeder') !== false) {
+            $this->info('✅ UserSeeder is already referenced in DatabaseSeeder.php');
+            return;
+        }
+        
+        // Ask if user wants to add UserSeeder to DatabaseSeeder
+        $this->line('');
+        if ($this->confirm('Would you like to add UserSeeder::class to the beginning of DatabaseSeeder.php run() method?', true)) {
+            $this->addUserSeederToDatabaseSeeder($seederContent, $databaseSeederPath);
+        }
+    }
+    
+    protected function addUserSeederToDatabaseSeeder(string $seederContent, string $seederPath): void
+    {
+        // Find the run() method and add UserSeeder at the beginning
+        $pattern = '/(public function run\(\): void\s*\{)(\s*)/';
+        
+        if (preg_match($pattern, $seederContent)) {
+            $replacement = '$1$2        $this->call(UserSeeder::class);$2';
+            $newSeederContent = preg_replace($pattern, $replacement, $seederContent);
+            
+            file_put_contents($seederPath, $newSeederContent);
+            $this->info('✅ UserSeeder::class added to DatabaseSeeder.php run() method');
+        } else {
+            $this->warn('⚠️  Could not automatically add UserSeeder to DatabaseSeeder.php. Please add it manually.');
+            $this->info('💡 Add this line to your DatabaseSeeder run() method: $this->call(UserSeeder::class);');
+        }
     }
 
     protected function checkAvatarUrlColumn(): bool
