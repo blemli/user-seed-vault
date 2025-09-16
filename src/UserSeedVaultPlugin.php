@@ -1,15 +1,15 @@
 <?php
 
-namespace VendorName\Skeleton;
+namespace Blemli\UserSeedVault;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 
-class SkeletonPlugin implements Plugin
+class UserSeedVaultPlugin implements Plugin
 {
     public function getId(): string
     {
-        return 'skeleton';
+        return 'user-seed-vault';
     }
 
     public function register(Panel $panel): void
