@@ -34,6 +34,7 @@ The command will prompt you for:
 ## Features
 
 - **Avatar Processing**: Automatically resizes images to 96x96px and converts to JPEG
+- **SVG Support**: Handles SVG files with ImageMagick conversion or preserves as SVG data
 - **Encryption**: All data is encrypted using Laravel's encryption system
 - **Multiple Users**: Option to add multiple users in one session
 - **Fallback Support**: Uses Intervention Image if available, falls back to PHP GD functions
@@ -44,6 +45,7 @@ The command will prompt you for:
 - JPEG (.jpg, .jpeg)
 - PNG (.png)
 - GIF (.gif)
+- SVG (.svg) - Vector graphics support with automatic conversion or preservation
 
 ## Output
 
@@ -104,6 +106,7 @@ Processing avatar...
 - Laravel 9+
 - GD extension (usually included with PHP)
 - intervention/image package (automatically installed)
+- ImageMagick extension (optional, for SVG conversion to raster formats)
 
 ## Error Handling
 
@@ -112,6 +115,8 @@ The command includes comprehensive error handling for:
 - Unsupported image formats
 - Image processing failures
 - Missing GD extension
+- SVG validation and processing errors
+- ImageMagick conversion failures
 - Encryption errors
 
 ## Security

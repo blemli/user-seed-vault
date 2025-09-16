@@ -124,6 +124,11 @@ class UserSeedVaultCommand extends Command
 
     protected function processAvatarWithGD(string $avatarPath): ?string
     {
+        // Check if it's an SVG file
+        if ($this->isSvgFile($avatarPath)) {
+            return $this->processSvgAvatar($avatarPath);
+        }
+
         // Check if GD extension is available
         if (!extension_loaded('gd')) {
             throw new \Exception('GD extension is not available');
@@ -175,6 +180,106 @@ class UserSeedVaultCommand extends Command
         imagedestroy($canvas);
 
         return base64_encode($imageData);
+    }
+
+    protected function isSvgFile(string $filePath): bool
+    {
+        // Check file extension
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        if ($extension === 'svg') {
+            return true;
+        }
+
+        // Check MIME type if available
+        if (function_exists('mime_content_type')) {
+            $mimeType = mime_content_type($filePath);
+            if ($mimeType === 'image/svg+xml') {
+                return true;
+            }
+        }
+
+        // Check file content for SVG signature
+        $fileContent = file_get_contents($filePath, false, null, 0, 1024);
+        return strpos($fileContent, '<svg') !== false || strpos($fileContent, '<?xml') !== false;
+    }
+
+    protected function processSvgAvatar(string $avatarPath): ?string
+    {
+        // For SVG files, we have several options:
+        // 1. Store as-is (if the application can handle SVG)
+        // 2. Convert to raster format using ImageMagick or similar
+        // 3. Use a simple approach and store the SVG content directly
+
+        // Check if ImageMagick is available for SVG conversion
+        if (extension_loaded('imagick')) {
+            return $this->convertSvgWithImageMagick($avatarPath);
+        }
+
+        // Fallback: store SVG as base64 encoded string
+        // Note: This assumes the application can handle SVG data
+        $svgContent = file_get_contents($avatarPath);
+        if ($svgContent === false) {
+            throw new \Exception('Failed to read SVG file');
+        }
+
+        // Validate that it's a proper SVG
+        if (!$this->isValidSvg($svgContent)) {
+            throw new \Exception('Invalid SVG file format');
+        }
+
+        // For consistency with other image types, we'll try to convert to JPEG
+        // If that's not possible, we'll store the SVG content
+        $this->warn('SVG file detected. Storing as SVG data (requires SVG support in your application).');
+        
+        return base64_encode($svgContent);
+    }
+
+    protected function convertSvgWithImageMagick(string $avatarPath): ?string
+    {
+        try {
+            if (!class_exists('Imagick')) {
+                throw new \Exception('ImageMagick extension is not available');
+            }
+
+            $imagick = new \Imagick();
+            $imagick->setBackgroundColor(new \ImagickPixel('white'));
+            $imagick->readImage($avatarPath);
+            $imagick->setImageFormat('jpeg');
+            $imagick->resizeImage(96, 96, \Imagick::FILTER_LANCZOS, 1);
+            $imagick->setImageCompressionQuality(90);
+            
+            $imageData = $imagick->getImageBlob();
+            $imagick->clear();
+            $imagick->destroy();
+            
+            return base64_encode($imageData);
+        } catch (\Exception $e) {
+            throw new \Exception('Failed to convert SVG with ImageMagick: ' . $e->getMessage());
+        }
+    }
+
+    protected function isValidSvg(string $content): bool
+    {
+        // Basic SVG validation
+        $content = trim($content);
+        
+        // Check for SVG opening tag
+        if (strpos($content, '<svg') === false) {
+            return false;
+        }
+        
+        // Check for closing tag
+        if (strpos($content, '</svg>') === false) {
+            return false;
+        }
+        
+        // Try to parse as XML
+        libxml_use_internal_errors(true);
+        $doc = simplexml_load_string($content);
+        $errors = libxml_get_errors();
+        libxml_clear_errors();
+        
+        return $doc !== false && empty($errors);
     }
 
     protected function outputUsers(): void
@@ -250,10 +355,25 @@ class UserSeeder extends Seeder
     public function saveFromBase64($base64, $directory)
     {
         $file = base64_decode($base64);
-        $filename = \Illuminate\Support\Str::ulid() . \'.jpg\';
+        
+        // Detect if this is SVG content
+        if ($this->isSvgContent($file)) {
+            $filename = \Illuminate\Support\Str::ulid() . \'.svg\';
+        } else {
+            $filename = \Illuminate\Support\Str::ulid() . \'.jpg\';
+        }
+        
         $relativePath = $directory . \'/\' . $filename;
         \Illuminate\Support\Facades\Storage::disk(\'public\')->put($relativePath, $file);
         return $relativePath;
+    }
+
+    private function isSvgContent($content): bool
+    {
+        return is_string($content) && (
+            strpos($content, \'<svg\') !== false || 
+            strpos($content, \'<?xml\') !== false
+        );
     }
 
     protected $users = [
