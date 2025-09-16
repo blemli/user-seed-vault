@@ -83,6 +83,11 @@ class UserSeedVaultServiceProvider extends PackageServiceProvider
                     $file->getRealPath() => base_path("stubs/user-seed-vault/{$file->getFilename()}"),
                 ], 'user-seed-vault-stubs');
             }
+
+            // Publish migrations
+            $this->publishes([
+                __DIR__ . '/../database/migrations/' => database_path('migrations'),
+            ], 'migrations');
         }
 
         // Testing

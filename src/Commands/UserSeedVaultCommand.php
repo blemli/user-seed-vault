@@ -305,6 +305,22 @@ class UserSeeder extends Seeder
             '--force' => true
         ]);
 
+        // Check if migration was published
+        $migrationPath = database_path('migrations');
+        $migrationFiles = glob($migrationPath . '/*add_avatar_url_to_users_table.php');
+        
+        if (empty($migrationFiles)) {
+            // If not published via vendor:publish, copy manually with timestamp
+            $this->info('📝 Creating migration file manually...');
+            $timestamp = date('Y_m_d_His');
+            $migrationFile = $migrationPath . '/' . $timestamp . '_add_avatar_url_to_users_table.php';
+            
+            $migrationContent = file_get_contents(__DIR__ . '/../../database/migrations/add_avatar_url_to_users_table.php.stub');
+            file_put_contents($migrationFile, $migrationContent);
+            
+            $this->info("✅ Migration created: {$migrationFile}");
+        }
+
         $this->info('🚀 Running migrations...');
         
         // Run migrations
