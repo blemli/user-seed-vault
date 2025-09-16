@@ -102,7 +102,7 @@ class UserSeedVaultServiceProvider extends PackageServiceProvider
         return [
             // AlpineComponent::make('user-seed-vault', __DIR__ . '/../resources/dist/components/user-seed-vault.js'),
             Css::make('user-seed-vault-styles', __DIR__ . '/../resources/dist/user-seed-vault.css'),
-            Js::make('user-seed-vault-scripts', __DIR__ . '/../resources/dist/user-seed-vault.js'),
+            // Js::make('user-seed-vault-scripts', __DIR__ . '/../resources/dist/user-seed-vault.js'),
         ];
     }
 
