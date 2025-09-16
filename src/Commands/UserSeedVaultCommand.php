@@ -17,6 +17,7 @@ class UserSeedVaultCommand extends Command
     public $description = 'Add a new user to the seed vault with encrypted data';
 
     protected $users = [];
+    protected $isFirstUser = true;
 
     public function handle(): int
     {
@@ -47,26 +48,36 @@ class UserSeedVaultCommand extends Command
     {
         $this->info('Enter user details:');
         
-        // Get name from option or ask for it
-        $name = $this->option('name');
-        if (!$name) {
+        // Only use command line options for the first user
+        if ($this->isFirstUser) {
+            // Get name from option or ask for it
+            $name = $this->option('name');
+            if (!$name) {
+                $name = $this->ask('Name');
+            }
+            
+            // Get email from option or ask for it
+            $email = $this->option('mail');
+            if (!$email) {
+                $email = $this->ask('Email');
+            }
+            
+            // Get avatar path from option or ask for it
+            $avatarPath = $this->option('avatar');
+            if (!$avatarPath) {
+                $avatarPath = $this->ask('Avatar file path (absolute path)');
+            }
+            
+            $this->isFirstUser = false;
+        } else {
+            // For subsequent users, always ask for input
             $name = $this->ask('Name');
-        }
-        
-        // Get email from option or ask for it
-        $email = $this->option('mail');
-        if (!$email) {
             $email = $this->ask('Email');
+            $avatarPath = $this->ask('Avatar file path (absolute path)');
         }
         
         // Always ask for password (never as parameter)
         $password = $this->secret('Password');
-        
-        // Get avatar path from option or ask for it
-        $avatarPath = $this->option('avatar');
-        if (!$avatarPath) {
-            $avatarPath = $this->ask('Avatar file path (absolute path)');
-        }
 
         // Validate avatar file exists
         if (!file_exists($avatarPath)) {
