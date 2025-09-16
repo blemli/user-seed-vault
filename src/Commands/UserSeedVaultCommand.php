@@ -155,21 +155,122 @@ class UserSeedVaultCommand extends Command
         }
 
         $this->line('');
-        $this->info('🎉 Generated encrypted user data:');
-        $this->line('');
+        $this->info('🎉 Adding encrypted user data to UserSeeder.php...');
         
-        foreach ($this->users as $index => $user) {
-            $this->line("// User " . ($index + 1));
-            $this->line('[');
-            $this->line('    "name" => "' . $user['name'] . '",');
-            $this->line('    "email" => "' . $user['email'] . '",');
-            $this->line('    "password" => "' . $user['password'] . '",');
-            $this->line('    "avatar" => "' . $user['avatar'] . '",');
-            $this->line('],');
-            $this->line('');
-        }
-
-        $this->info('💡 Copy the above array entries and add them to your UserSeeder $users array.');
+        $this->addUsersToSeeder();
+        
+        $this->info('✅ Users successfully added to database/seeders/UserSeeder.php');
         $this->line('');
+        $this->info('💡 You can now run "php artisan db:seed --class=UserSeeder" to seed the users.');
+        $this->line('');
+    }
+
+    protected function addUsersToSeeder(): void
+    {
+        $seederPath = database_path('seeders/UserSeeder.php');
+        
+        // Create seeders directory if it doesn't exist
+        if (!is_dir(dirname($seederPath))) {
+            mkdir(dirname($seederPath), 0755, true);
+        }
+        
+        // Check if UserSeeder.php exists, if not create it
+        if (!file_exists($seederPath)) {
+            $this->createUserSeeder($seederPath);
+        }
+        
+        // Read the current seeder file
+        $seederContent = file_get_contents($seederPath);
+        
+        // Find the $users array and add new users
+        $this->updateUsersArray($seederContent, $seederPath);
+    }
+
+    protected function createUserSeeder(string $path): void
+    {
+        $seederTemplate = '<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Crypt;
+
+class UserSeeder extends Seeder
+{
+    use WithoutModelEvents;
+
+    public function saveFromBase64($base64, $directory)
+    {
+        $file = base64_decode($base64);
+        $filename = \Illuminate\Support\Str::ulid() . \'.jpg\';
+        $relativePath = $directory . \'/\' . $filename;
+        \Illuminate\Support\Facades\Storage::disk(\'public\')->put($relativePath, $file);
+        return $relativePath;
+    }
+
+    protected $users = [
+        // Users will be added here by the seedvault:add command
+    ];
+
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        foreach ($this->users as $user) {
+            User::updateOrCreate([
+                \'email\' => Crypt::decrypt($user[\'email\'])
+            ], [
+                \'name\' => Crypt::decrypt($user[\'name\']),
+                \'password\' => bcrypt(Crypt::decrypt($user[\'password\'])),
+                \'avatar_url\' => $this->saveFromBase64(Crypt::decrypt($user[\'avatar\']), \'avatars\'),
+            ]);
+        }
+    }
+}
+';
+        file_put_contents($path, $seederTemplate);
+    }
+
+    protected function updateUsersArray(string $seederContent, string $seederPath): void
+    {
+        // Find the $users array
+        $pattern = '/protected \$users = \[(.*?)\];/s';
+        
+        if (preg_match($pattern, $seederContent, $matches)) {
+            $currentUsersContent = $matches[1];
+            
+            // Generate new user entries
+            $newUsersContent = $currentUsersContent;
+            
+            foreach ($this->users as $index => $user) {
+                $userEntry = "\n        // User " . ($this->getUserCount($currentUsersContent) + $index + 1) . "\n";
+                $userEntry .= "        [\n";
+                $userEntry .= "            \"name\" => \"" . $user['name'] . "\",\n";
+                $userEntry .= "            \"email\" => \"" . $user['email'] . "\",\n";
+                $userEntry .= "            \"password\" => \"" . $user['password'] . "\",\n";
+                $userEntry .= "            \"avatar\" => \"" . $user['avatar'] . "\",\n";
+                $userEntry .= "        ],";
+                
+                $newUsersContent .= $userEntry;
+            }
+            
+            // Replace the users array in the seeder content
+            $newSeederContent = preg_replace(
+                $pattern,
+                'protected $users = [' . $newUsersContent . "\n    ];",
+                $seederContent
+            );
+            
+            file_put_contents($seederPath, $newSeederContent);
+        }
+    }
+
+    protected function getUserCount(string $usersContent): int
+    {
+        // Count existing user entries by counting opening brackets
+        return substr_count($usersContent, '[') - substr_count($usersContent, '// Users will be added here');
     }
 }
