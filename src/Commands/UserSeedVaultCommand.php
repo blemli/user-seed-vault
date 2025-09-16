@@ -19,6 +19,16 @@ class UserSeedVaultCommand extends Command
         $this->info('🔐 User Seed Vault - Add New User');
         $this->line('');
 
+        // Check if avatar_url column exists
+        if (!$this->checkAvatarUrlColumn()) {
+            if ($this->confirm('The users table is missing the required avatar_url column. Would you like to publish and run the migration now?', true)) {
+                $this->publishAndRunMigration();
+            } else {
+                $this->error('Cannot proceed without the avatar_url column. Please run the migration manually.');
+                return self::FAILURE;
+            }
+        }
+
         do {
             $this->addUser();
             $addAnother = $this->confirm('Would you like to add another user?', false);
@@ -272,5 +282,39 @@ class UserSeeder extends Seeder
     {
         // Count existing user entries by counting opening brackets
         return substr_count($usersContent, '[') - substr_count($usersContent, '// Users will be added here');
+    }
+
+    protected function checkAvatarUrlColumn(): bool
+    {
+        try {
+            return \Illuminate\Support\Facades\Schema::hasColumn('users', 'avatar_url');
+        } catch (\Exception $e) {
+            // If we can't check the column (e.g., users table doesn't exist), return false
+            return false;
+        }
+    }
+
+    protected function publishAndRunMigration(): void
+    {
+        $this->info('📦 Publishing migrations...');
+        
+        // Publish migrations
+        $this->call('vendor:publish', [
+            '--provider' => 'Blemli\UserSeedVault\UserSeedVaultServiceProvider',
+            '--tag' => 'migrations',
+            '--force' => true
+        ]);
+
+        $this->info('🚀 Running migrations...');
+        
+        // Run migrations
+        $this->call('migrate');
+
+        // Verify the column was added
+        if ($this->checkAvatarUrlColumn()) {
+            $this->info('✅ Avatar URL column successfully added to users table!');
+        } else {
+            $this->error('❌ Failed to add avatar_url column. Please check the migration manually.');
+        }
     }
 }

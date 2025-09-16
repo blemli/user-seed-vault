@@ -8,6 +8,16 @@ This artisan command allows you to create encrypted user data for seeding your L
 2. Run `composer install` to install dependencies including `intervention/image`
 3. The command will be automatically registered
 
+**Note**: The `seedvault:add` command will automatically check if the required `avatar_url` column exists in your users table. If it's missing, the command will offer to publish and run the migration for you automatically.
+
+### Manual Migration (Optional)
+
+If you prefer to run the migration manually:
+```bash
+php artisan vendor:publish --provider="Blemli\UserSeedVault\UserSeedVaultServiceProvider" --tag="migrations"
+php artisan migrate
+```
+
 ## Usage
 
 Run the command:

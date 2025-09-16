@@ -147,6 +147,7 @@ class UserSeedVaultServiceProvider extends PackageServiceProvider
     {
         return [
             'create_user-seed-vault_table',
+            'add_avatar_url_to_users_table',
         ];
     }
 }
