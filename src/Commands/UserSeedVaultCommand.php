@@ -115,6 +115,11 @@ class UserSeedVaultCommand extends Command
 
     protected function processAvatarWithIntervention(string $avatarPath): ?string
     {
+        // Check if it's an SVG file first - Intervention Image may not handle SVGs well
+        if ($this->isSvgFile($avatarPath)) {
+            return $this->processSvgAvatar($avatarPath);
+        }
+
         $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
         $image = $manager->read($avatarPath);
         $image->resize(96, 96);
